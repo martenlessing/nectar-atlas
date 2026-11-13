@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nectar Atlas — Know where your honey comes from</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FBF6EC; --paper2:#F4EBD9; --card:#FFFDF8; --ink:#2A1E12; --ink2:#6B5843; --line:#E6D8BF;
+  --amber:#D48A12; --gold:#F2C14E; --sage:#6F8456; --sea:#CFE0DE; --sea2:#B9D2CF; --land:#EFE4CC;
+  --r:16px; --shadow:0 1px 2px rgba(42,30,18,.06),0 8px 24px rgba(42,30,18,.08);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);font-family:'DM Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:'Fraunces',Georgia,serif;margin:0;letter-spacing:-.01em}
+button{font:inherit;cursor:pointer}
+a{color:inherit}
+.wrap{max-width:1240px;margin:0 auto;padding:0 24px}
+
+/* header */
+header{position:sticky;top:0;z-index:30;background:rgba(251,246,236,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.hbar{display:flex;align-items:center;gap:24px;height:68px}
+.logo{display:flex;align-items:center;gap:10px;font-family:'Fraunces',serif;font-weight:700;font-size:22px;text-decoration:none}
+.logo small{display:block;font-family:'DM Sans';font-weight:500;font-size:11px;color:var(--ink2);letter-spacing:.08em;text-transform:uppercase}
+nav{display:flex;gap:4px;margin-left:auto}
+nav a{padding:9px 14px;border-radius:999px;text-decoration:none;font-weight:500;font-size:15px;color:var(--ink2)}
+nav a:hover{background:var(--paper2);color:var(--ink)}
+nav a.on{background:var(--ink);color:var(--paper)}
+.scanbtn{display:flex;align-items:center;gap:8px;background:var(--amber);color:#fff;border:0;border-radius:999px;padding:10px 16px;font-weight:600;text-decoration:none}
+.scanbtn:hover{filter:brightness(1.05)}
+.demo{background:var(--ink);color:#F7E7C6;font-size:12.5px;text-align:center;padding:6px 12px}
+
+/* views */
+.view{display:none;padding:28px 0 64px}
+.view.on{display:block}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--amber)}
+.hero{display:grid;grid-template-columns:1.2fr 1fr;gap:32px;align-items:end;margin-bottom:24px}
+.hero h1{font-size:46px;line-height:1.04;margin-top:8px}
+.hero p{color:var(--ink2);font-size:17px;line-height:1.55;margin:0}
+.steps{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.step{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:7px 14px 7px 7px;font-size:14px;font-weight:500}
+.step b{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--gold);font-size:12px}
+
+.mapgrid{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.mapcard{position:relative;overflow:hidden}
+.maptop{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.seg{display:inline-flex;background:var(--paper2);border-radius:999px;padding:3px}
+.seg button{border:0;background:none;padding:7px 14px;border-radius:999px;font-weight:500;font-size:14px;color:var(--ink2)}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.maptop .hint{margin-left:auto;font-size:13px;color:var(--ink2)}
+svg.map{display:block;width:100%;height:auto;background:var(--land)}
+.pin{cursor:pointer;transition:transform .15s}
+.pin .hex{stroke:#fff;stroke-width:2.5;filter:drop-shadow(0 2px 3px rgba(42,30,18,.35))}
+.pin:hover .hex,.pin.hl .hex{stroke:var(--ink);stroke-width:3}
+.pin .lbl{opacity:0;transition:opacity .15s;pointer-events:none}
+.pin:hover .lbl,.pin.hl .lbl{opacity:1}
+.town{font-size:13px;fill:#8A7660;font-weight:500}
+.townd{fill:#8A7660}
+.seaL{font-family:'Fraunces',serif;font-style:italic;fill:#6E9592;font-size:22px;letter-spacing:.2em}
+.legend{position:absolute;left:16px;bottom:14px;background:rgba(255,253,248,.94);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:12px;color:var(--ink2)}
+.legend .bar{height:10px;width:180px;border-radius:5px;background:linear-gradient(90deg,#F6E7A8,#EFC75E,#D99A2B,#A9611A,#5E300D);margin:6px 0 3px}
+.legend .ends{display:flex;justify-content:space-between}
+
+.side{display:flex;flex-direction:column;max-height:600px}
+.side h3{font-size:20px;padding:16px 16px 4px}
+.side .sub{padding:0 16px 10px;font-size:13px;color:var(--ink2)}
+.list{overflow:auto;padding:0 8px 8px}
+.row{display:flex;gap:12px;align-items:center;padding:10px 8px;border-radius:12px;cursor:pointer}
+.row:hover,.row.hl{background:var(--paper2)}
+.row .t{font-weight:600;font-size:15px}
+.row .m{font-size:13px;color:var(--ink2)}
+.row .s{margin-left:auto;font-size:12px;font-weight:600;color:var(--sage);white-space:nowrap}
+
+/* chips */
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:500;color:var(--ink2)}
+.chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+
+/* directory */
+.dirhead{display:flex;align-items:end;gap:20px;flex-wrap:wrap;margin-bottom:20px}
+.dirhead h2{font-size:38px}
+.search{flex:1;min-width:240px;max-width:380px;margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:10px 16px}
+.search input{border:0;outline:0;background:none;font:inherit;width:100%}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px;margin-top:18px}
+.hcard{cursor:pointer;overflow:hidden;transition:transform .15s}
+.hcard:hover{transform:translateY(-3px)}
+.hcard .top{height:170px;display:grid;place-items:center;position:relative}
+.hcard .top .season{position:absolute;top:12px;left:12px}
+.hcard .body{padding:14px 16px 16px}
+.hcard h4{font-size:19px}
+.hcard .by{font-size:13.5px;color:var(--ink2);margin-top:2px}
+.hcard .fl{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.tag{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--paper2);color:var(--ink2);font-weight:500}
+.vbadge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--sage)}
+
+/* scan */
+.scanwrap{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
+.scanwrap h2{font-size:40px;line-height:1.05;margin:8px 0 12px}
+.scanwrap p{color:var(--ink2);line-height:1.55}
+.drop{border:2px dashed #D9C39A;border-radius:20px;background:var(--card);padding:34px;text-align:center;cursor:pointer;transition:.15s}
+.drop:hover,.drop.over{border-color:var(--amber);background:#FFF8EA}
+.drop .ic{width:64px;height:64px;border-radius:50%;background:var(--gold);display:grid;place-items:center;margin:0 auto 12px}
+.drop b{font-size:18px;display:block}
+.samples{margin-top:22px}
+.samples .sj{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.sj button{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:8px 8px 6px;font-size:11.5px;color:var(--ink2);width:84px}
+.sj button:hover{border-color:var(--amber)}
+.stage{position:relative;border-radius:20px;overflow:hidden;background:#1d150c;aspect-ratio:1/1;max-height:560px;display:grid;place-items:center}
+.stage img{width:100%;height:100%;object-fit:cover;opacity:.85}
+.stage .ph{color:#B9A68A;text-align:center;padding:30px;font-size:14px}
+.sweep{position:absolute;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--gold),transparent);box-shadow:0 0 18px 6px rgba(242,193,78,.5);top:0;animation:sweep 1.4s ease-in-out infinite alternate;display:none}
+.scanning .sweep{display:block}
+@keyframes sweep{to{top:100%}}
+.bracket{position:absolute;inset:14%;border:2px solid rgba(242,193,78,.0);display:none}
+.scanning .bracket{display:block;border-color:rgba(242,193,78,.75);border-radius:14px;animation:pulse 1.2s infinite}
+@keyframes pulse{50%{inset:16%}}
+.log{position:absolute;left:14px;right:14px;bottom:14px;background:rgba(20,14,8,.78);color:#F7E7C6;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.7;font-family:ui-monospace,Menlo,monospace;display:none}
+.scanning .log,.done .log{display:block}
+.log .ok{color:#A8C98A}
+.match{margin-top:16px;display:none;padding:16px;gap:14px;align-items:center}
+.match.on{display:flex}
+.match .conf{font-size:12px;font-weight:700;color:var(--sage);text-transform:uppercase;letter-spacing:.08em}
+.btn{border:0;background:var(--ink);color:var(--paper);border-radius:999px;padding:11px 18px;font-weight:600}
+.btn.alt{background:var(--paper2);color:var(--ink)}
+
+/* journal */
+.jgrid{display:grid;grid-template-columns:1fr 340px;gap:28px;align-items:start}
+.post{padding:20px;margin-bottom:16px}
+.post .ph{display:flex;gap:12px;align-items:center;margin-bottom:12px;cursor:pointer}
+.avatar{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-weight:700;color:#fff;font-size:14px;flex:none}
+.post h3{font-size:22px;margin-bottom:6px}
+.post p{color:var(--ink2);line-height:1.6;margin:0}
+.post .meta{font-size:13px;color:var(--ink2)}
+.news{padding:22px;position:sticky;top:96px;background:var(--ink);color:var(--paper);border:0}
+.news h3{font-size:26px;margin:6px 0 8px}
+.news p{color:#D8C7A8;line-height:1.55;font-size:14.5px}
+.news input{width:100%;border:0;border-radius:999px;padding:12px 16px;font:inherit;margin:8px 0}
+.news .btn{background:var(--gold);color:var(--ink);width:100%}
+
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(42,30,18,.35);opacity:0;pointer-events:none;transition:.2s;z-index:40}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--paper);z-index:50;transform:translateX(102%);transition:transform .28s cubic-bezier(.2,.8,.2,1);overflow:auto;box-shadow:-12px 0 40px rgba(42,30,18,.18)}
+.drawer.on{transform:none}
+.dhero{padding:22px 24px 20px;position:relative}
+.close{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.75);font-size:20px;line-height:1}
+.dhero .hrow{display:flex;gap:18px;align-items:center}
+.dhero h2{font-size:32px;line-height:1.05}
+.dhero .prod{font-size:15px;margin-top:6px;color:var(--ink2)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:18px}
+.stat{background:rgba(255,253,248,.8);border-radius:12px;padding:10px}
+.stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);font-weight:600}
+.stat .v{font-weight:700;font-size:15px;margin-top:2px}
+.sec{padding:20px 24px;border-top:1px solid var(--line)}
+.sec h3{font-size:21px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.sec p{line-height:1.6;color:var(--ink2);margin:0}
+.minimap{border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+.coords{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:14px}
+.coords code{background:var(--paper2);padding:5px 9px;border-radius:8px;font-size:13px}
+.coords button{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:5px 10px;font-size:13px}
+.floral{margin-bottom:14px}
+.floral .fh{display:flex;justify-content:space-between;font-weight:600;font-size:15px}
+.floral .fh i{font-weight:400;color:var(--ink2);font-size:13px;margin-left:6px}
+.fbar{height:8px;background:var(--paper2);border-radius:4px;margin:6px 0;overflow:hidden}
+.fbar span{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--amber));border-radius:4px}
+.floral .fact{font-size:13.5px;color:var(--ink2);line-height:1.5}
+.queen{display:flex;gap:16px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.queen .crown{width:56px;height:56px;flex:none;border-radius:50%;display:grid;place-items:center;background:var(--paper2);position:relative}
+.queen .dot{position:absolute;right:2px;top:2px;width:16px;height:16px;border-radius:50%;border:2px solid var(--card);box-shadow:0 0 0 1px #0002}
+.queen h4{font-size:20px}
+.queen .qm{font-size:13.5px;color:var(--ink2);margin:3px 0 8px}
+.spec{width:100%;border-collapse:collapse;font-size:14px}
+.spec td{padding:8px 0;border-bottom:1px dashed var(--line)}
+.spec td:first-child{color:var(--ink2);width:46%}
+.spec td:last-child{font-weight:600}
+.notes{display:flex;gap:8px;flex-wrap:wrap}
+.fpost{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.fpost .d{font-size:12px;color:var(--ink2);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.fpost b{display:block;margin:4px 0;font-size:15.5px}
+.fpost p{font-size:14px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,20px);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:.2s;z-index:60;pointer-events:none}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+footer{border-top:1px solid var(--line);padding:22px 0;color:var(--ink2);font-size:13px}
+
+@media (max-width:900px){
+  .hero,.mapgrid,.scanwrap,.jgrid{grid-template-columns:1fr}
+  .hero h1{font-size:36px}
+  nav a{padding:8px 10px;font-size:14px}
+  .scanbtn span{display:none}
+  .side{max-height:none}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .news{position:static}
+}
+@media (max-width:620px){ nav{display:none} }
+</style>
+</head>
+<body>
+<div class="demo">Prototype · consumer view · all producers, queens and coordinates below are sample data</div>
+<header>
+  <div class="wrap hbar">
+    <a class="logo" href="#map">
+      <svg width="34" height="34" viewBox="0 0 40 40"><path d="M20 3l14.7 8.5v17L20 37 5.3 28.5v-17z" fill="#F2C14E" stroke="#2A1E12" stroke-width="2"/><path d="M14 22c2-6 10-6 12 0" fill="none" stroke="#2A1E12" stroke-width="2" stroke-linecap="round"/><circle cx="20" cy="16" r="2.4" fill="#2A1E12"/></svg>
+      <div>Nectar Atlas<small>Know your honey</small></div>
+    </a>
+    <nav>
+      <a href="#map" data-v="map">Map</a>
+      <a href="#directory" data-v="directory">Directory</a>
+      <a href="#journal" data-v="journal">Journal</a>
+    </nav>
+    <a class="scanbtn" href="#scan"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3"/><circle cx="12" cy="12" r="3.2"/></svg><span>Scan a jar</span></a>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- MAP -->
+  <section class="view" id="v-map">
+    <div class="hero">
+      <div>
+        <div class="eyebrow">Santa Barbara County · Fall 2026</div>
+        <h1>Every jar has a hometown.</h1>
+      </div>
+      <div>
+        <p>Tap a hive on the map to see exactly where your honey was made, what the bees were drinking, and who's running the colony.</p>
+        <div class="steps">
+          <div class="step"><b>1</b>Scan the jar</div>
+          <div class="step"><b>2</b>See the farm</div>
+          <div class="step"><b>3</b>Meet the queen</div>
+        </div>
+      </div>
+    </div>
+    <div class="mapgrid">
+      <div class="card mapcard">
+        <div class="maptop">
+          <div class="seg" id="seg">
+            <button data-m="sb" class="on">Santa Barbara</button>
+            <button data-m="us">United States</button>
+          </div>
+          <div class="chips" id="seasonChips"></div>
+          <span class="hint" id="maphint">8 apiaries · hover a hive</span>
+        </div>
+        <div id="mapHost"></div>
+        <div class="legend" id="legend">
+          <b style="color:var(--ink)">Honey color</b> (Pfund scale)
+          <div class="bar"></div>
+          <div class="ends"><span>Water white</span><span>Dark amber</span></div>
+        </div>
+      </div>
+      <div class="card side">
+        <h3>Jars on the map</h3>
+        <div class="sub">Sorted west → east along the coast</div>
+        <div class="list" id="sideList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCAN -->
+  <section class="view" id="v-scan">
+    <div class="scanwrap">
+      <div>
+        <div class="eyebrow">Jar scan</div>
+        <h2>Point your camera at any local jar.</h2>
+        <p>We read the label, batch code and producer mark, then pull the beekeeper's own record: farm location, forage, harvest, and the queen behind it.</p>
+        <label class="drop" id="drop" style="display:block;margin-top:20px">
+          <input type="file" accept="image/*" capture="environment" id="file" hidden>
+          <div class="ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#2A1E12" stroke-width="2" stroke-linecap="round"><path d="M3 8a2 2 0 012-2h2l1.5-2h7L17 6h2a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+          <b>Take or upload a photo</b>
+          <span style="color:var(--ink2);font-size:14px">Front label works best · JPG, PNG, HEIC</span>
+        </label>
+        <div class="samples">
+          <div class="eyebrow" style="color:var(--ink2)">No jar handy? Try a sample</div>
+          <div class="sj" id="sampleJars"></div>
+        </div>
+      </div>
+      <div>
+        <div class="stage" id="stage">
+          <div class="ph" id="stagePh">Your photo will appear here</div>
+          <div class="bracket"></div>
+          <div class="sweep"></div>
+          <div class="log" id="log"></div>
+        </div>
+        <div class="card match" id="match"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DIRECTORY -->
+  <section class="view" id="v-directory">
+    <div class="dirhead">
+      <div><div class="eyebrow">Directory</div><h2>Local honey, standardized.</h2></div>
+      <div class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B5843" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5" stroke-linecap="round"/></svg><input id="q" placeholder="Search a flower, town, or beekeeper"></div>
+    </div>
+    <div class="chips" id="dirChips"></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <!-- JOURNAL -->
+  <section class="view" id="v-journal">
+    <div class="jgrid">
+      <div>
+        <div class="eyebrow">Field journal</div>
+        <h2 style="font-size:38px;margin:6px 0 20px">Notes from the hives.</h2>
+        <div id="feed"></div>
+      </div>
+      <div class="card news">
+        <div class="eyebrow" style="color:var(--gold)">The Weekly Comb</div>
+        <h3>One email. What's blooming, what's being pulled.</h3>
+        <p>Every Sunday: fresh harvests from local apiaries, the flower behind each, and where to buy it before it's gone.</p>
+        <form id="sub"><input type="email" placeholder="you@email.com" required><button class="btn">Subscribe</button></form>
+        <p id="subok" style="display:none;color:var(--gold);margin:6px 0 0">You're on the list (demo — nothing was sent).</p>
+      </div>
+    </div>
+  </section>
+</main>
+<footer><div class="wrap">Nectar Atlas prototype · Consumer side · Producer data shown is illustrative, not real businesses.</div></footer>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-hidden="true"></aside>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------------- DATA (sample records as a producer would submit them) ---------------- */
+const QCOLOR={1:'#FFFFFF',6:'#FFFFFF',2:'#F5D90A',7:'#F5D90A',3:'#E23B3B',8:'#E23B3B',4:'#3DAA4F',9:'#3DAA4F',5:'#2F6FE0',0:'#2F6FE0'};
+const QCOLORNAME={1:'white',6:'white',2:'yellow',7:'yellow',3:'red',8:'red',4:'green',9:'green',5:'blue',0:'blue'};
+const BREEDS={
+ Italian:'Apis mellifera ligustica — gentle, prolific, famously good at building big summer populations.',
+ Carniolan:'Apis mellifera carnica — calm, thrifty in winter, and quick to explode in spring bloom.',
+ Buckfast:'A hybrid line developed by Brother Adam at Buckfast Abbey, England — bred for gentleness and disease resistance.',
+ Saskatraz:'A Canadian line bred in Saskatchewan for tolerance to varroa mites and strong honey production.'
+};
+const honeys=[
+{id:'lompoc',honey:'Flower Fields Blend',producer:'Lompoc Seed Row Apiary',keeper:'Daniel Ochoa',place:'Lompoc Valley',lat:34.652,lon:-120.468,season:'Summer',harvest:'July 2026',pfund:42,hex:'#E7B640',moisture:17.6,hives:30,crystal:'Medium — creamy in 2–3 months',notes:['Honeysuckle','Fresh hay','Vanilla'],
+ florals:[{n:'Sweet pea & larkspur',l:'Lathyrus / Delphinium',p:45,f:'Lompoc earned the nickname "Flower Seed Capital of the World" for its rows of seed flowers grown each summer.'},{n:'Wild mustard',l:'Brassica nigra',p:30,f:'Mustard honey crystallizes fast because it\'s high in glucose — that\'s why this jar goes creamy.'},{n:'Coyote brush',l:'Baccharis pilularis',p:25,f:'One of the few things blooming in late summer and fall; a lifeline when everything else is done.'}],
+ queen:{name:'Sweet Pea',breed:'Italian',year:2026,temp:'Very gentle',note:'Raised from our own stock this spring after the old queen superseded. Laying wall-to-wall brood.'},
+ story:'Daniel parks hives along the edges of seed fields each summer under agreements with growers. The bees get a buffet; the growers get better seed set.',
+ posts:[{d:'2026-11-02',t:'Putting the hives to bed',b:'Last supers came off this week. We left 60+ lbs of honey on each colony for winter — we never take their pantry.'}],
+ batch:'LSR-26-07',buy:['Old Town Lompoc farm stand','Online pre-order']},
+{id:'buckwheat',honey:'Mesa Buckwheat',producer:'Los Alamos Ridge Honey',keeper:'Priya Natarajan',place:'Los Alamos hills',lat:34.738,lon:-120.272,season:'Fall',harvest:'September 2026',pfund:104,hex:'#A65F1A',moisture:16.9,hives:18,crystal:'Slow',notes:['Molasses','Malt','Dried cherry'],
+ florals:[{n:'California buckwheat',l:'Eriogonum fasciculatum',p:78,f:'Blooms white, then fades to rust-red. Bees keep working it for months, which is why it\'s a backbone of California honey.'},{n:'Chamise',l:'Adenostoma fasciculatum',p:14,f:'The most common chaparral shrub in California — it covers whole hillsides.'},{n:'Toyon',l:'Heteromeles arbutifolia',p:8,f:'Also called California holly; Hollywood is often said to be named after it.'}],
+ queen:{name:'Delphine',breed:'Carniolan',year:2024,temp:'Calm, frugal',note:'Our oldest queen in the yard. Two seasons in and still laying a tight pattern — we\'ll let her go one more.'},
+ story:'Priya runs 18 hives on a cattle ranch in the hills above Los Alamos. No crops nearby; it\'s pure wild chaparral.',
+ posts:[{d:'2026-10-21',t:'Why this year is darker',b:'Buckwheat bloomed late and long after the spring rains, so this batch is darker and maltier than last year\'s.'}],
+ batch:'LAR-26-09',buy:['Los Alamos general store','Saturday market, downtown SB']},
+{id:'gaviota',honey:'Coastal Sage & Buckwheat',producer:'Gaviota Coast Bee Co.',keeper:'Marcus Bell',place:'Gaviota Coast',lat:34.482,lon:-120.205,season:'Summer',harvest:'June 2026',pfund:62,hex:'#D99A2B',moisture:17.1,hives:22,crystal:'Slow',notes:['Herbal','Salted caramel','Toasted nut'],
+ florals:[{n:'Purple sage',l:'Salvia leucophylla',p:40,f:'Sage honeys are high in fructose, so they stay liquid for a long time.'},{n:'California buckwheat',l:'Eriogonum fasciculatum',p:35,f:'Gives the honey its darker, toasty finish.'},{n:'Lemonade berry',l:'Rhus integrifolia',p:25,f:'A coastal shrub that blooms pink in late winter — early fuel for the colony.'}],
+ queen:{name:'Juniper',breed:'Carniolan',year:2025,temp:'Calm on frames',note:'Survived a windy coastal winter without missing a beat. Her daughters fly in fog other colonies won\'t.'},
+ story:'Hives sit on a family ranch between the ocean and the Santa Ynez ridge. The marine layer slows the bloom, so the season runs long.',
+ posts:[{d:'2026-10-28',t:'Fog season notes',b:'Mornings are socked in, flights start around 11. Feeding pollen patties to two lighter colonies.'}],
+ batch:'GCB-26-06',buy:['Ranch stand off Hwy 101','Online']},
+{id:'ynez',honey:'Valley Wildflower',producer:'Santa Ynez Wildflower Hives',keeper:'Hannah & Joe Lund',place:'Santa Ynez Valley',lat:34.618,lon:-120.06,season:'Spring',harvest:'May 2026',pfund:55,hex:'#E1A73A',moisture:17.4,hives:40,crystal:'Medium',notes:['Lavender','Apricot','Honeycomb'],
+ florals:[{n:'Lavender',l:'Lavandula spp.',p:35,f:'The valley\'s lavender farms bloom in early summer; bees work it hard in the heat of the day.'},{n:'Ceanothus',l:'Ceanothus spp.',p:30,f:'California lilac — those blue-purple hillsides in spring. A big early pollen source.'},{n:'Wild radish',l:'Raphanus sativus',p:20,f:'A roadside weed that\'s a quiet hero for bees in spring.'},{n:'Oak honeydew',l:'Quercus spp.',p:15,f:'Not nectar at all — sweet secretions from insects on valley oaks. Adds depth.'}],
+ queen:{name:'Clementine',breed:'Buckfast',year:2026,temp:'Gentle',note:'Mated this April. Very productive — her colony filled two supers in the lavender flow.'},
+ story:'A husband-and-wife operation running 40 hives across three vineyards and a lavender farm.',
+ posts:[{d:'2026-11-05',t:'Comb honey is back',b:'We cut 60 boxes of comb from the spring flow. Holding some for the holiday markets.'},{d:'2026-10-10',t:'Mite check results',b:'All 40 colonies under threshold on our October wash. Good sign heading into winter.'}],
+ batch:'SYW-26-05',buy:['Solvang farmers market (Wed)','Vineyard tasting rooms']},
+{id:'blacksage',honey:'Black Sage',producer:'San Marcos Pass Apiary',keeper:'Tomás Herrera',place:'San Marcos Pass',lat:34.505,lon:-119.86,season:'Spring',harvest:'May 2026',pfund:24,hex:'#F0CF6A',moisture:16.8,hives:14,crystal:'Very slow — can stay liquid for years',notes:['Clean','Mint','Pear'],
+ florals:[{n:'Black sage',l:'Salvia mellifera',p:72,f:'"Mellifera" literally means honey-bearing. One of California\'s most prized honey plants.'},{n:'White sage',l:'Salvia apiana',p:18,f:'"Apiana" means "of bees." Its long stalks bend under the weight of foraging bumblebees.'},{n:'Manzanita',l:'Arctostaphylos spp.',p:10,f:'Blooms in late winter — little pink bells that feed the colony before spring.'}],
+ queen:{name:'Ofelia',breed:'Italian',year:2025,temp:'Gentle',note:'Re-queened after a spicy colony last year. Night-and-day difference.'},
+ story:'Tomás keeps a small yard high on the pass in the Los Padres foothills. Sage years are rare; this was one.',
+ posts:[{d:'2026-10-15',t:'Rain dance',b:'Black sage only shows up big after a wet winter. Fingers crossed for rain.'}],
+ batch:'SMP-26-05',buy:['Saturday market, downtown SB']},
+{id:'goleta',honey:'Winter Eucalyptus',producer:'Goleta Slough Honey',keeper:'Avery Kim',place:'Goleta',lat:34.44,lon:-119.835,season:'Winter',harvest:'February 2026',pfund:74,hex:'#C98326',moisture:17.8,hives:12,crystal:'Medium',notes:['Menthol','Butterscotch','Wet wood'],
+ florals:[{n:'Blue gum eucalyptus',l:'Eucalyptus globulus',p:65,f:'Brought over from Australia in the 1800s; it blooms in winter, when almost nothing else does.'},{n:'Coyote brush',l:'Baccharis pilularis',p:20,f:'Fall and early winter bloom.'},{n:'Ice plant',l:'Carpobrotus edulis',p:15,f:'The bright coastal groundcover by the beaches. Bees love it.'}],
+ queen:{name:'Ruby',breed:'Saskatraz',year:2025,temp:'Moderate',note:'Chosen for mite tolerance. Lowest counts in the yard two checks running.'},
+ story:'Avery runs 12 hives near the slough and the monarch groves, a few minutes from campus.',
+ posts:[{d:'2026-11-08',t:'Eucalyptus is starting',b:'First blooms on the blue gums. Expect a winter batch in February.'}],
+ batch:'GSH-26-02',buy:['Isla Vista co-op','Goleta farmers market (Thu)']},
+{id:'sycamore',honey:'Foothill Orange Blossom',producer:'Sycamore Canyon Apiary',keeper:'Elena Ruiz',place:'Montecito foothills',lat:34.452,lon:-119.638,season:'Spring',harvest:'April 2026',pfund:28,hex:'#ECC24F',moisture:17.2,hives:24,crystal:'Slow',notes:['Orange zest','Jasmine','Light caramel'],
+ florals:[{n:'Orange blossom',l:'Citrus sinensis',p:70,f:'Citrus groves bloom for a few weeks in spring. The flowers smell so strong you can pick it out in the honey.'},{n:'Ceanothus',l:'Ceanothus spp.',p:18,f:'California lilac: blue hillsides in March.'},{n:'Black sage',l:'Salvia mellifera',p:12,f:'A late-spring finish from the canyon walls.'}],
+ queen:{name:'Marisol',breed:'Italian',year:2026,temp:'Gentle, prolific',note:'Raised from our best-tempered colony. She can lay well over 1,500 eggs a day at the peak of bloom.'},
+ story:'Elena keeps hives on old citrus terraces above Montecito, a family property since the 1940s.',
+ posts:[{d:'2026-10-30',t:'Re-planting the terraces',b:'Planted 40 new Valencia trees on the upper terrace. Good bloom in 3–4 years.'}],
+ batch:'SCA-26-04',buy:['Montecito farmers market (Fri)','Saturday market, downtown SB']},
+{id:'carp',honey:'Avocado Grove',producer:'Carpinteria Grove Apiary',keeper:'Luis & Rosa Mendez',place:'Carpinteria',lat:34.42,lon:-119.49,season:'Spring',harvest:'May 2026',pfund:122,hex:'#6E3A12',moisture:17.0,hives:28,crystal:'Slow',notes:['Molasses','Butter','Burnt sugar'],
+ florals:[{n:'Avocado',l:'Persea americana',p:80,f:'Each avocado flower opens twice: female on day one, male on day two. Bees carry pollen between trees on different schedules.'},{n:'Citrus',l:'Citrus spp.',p:12,f:'From neighboring orchards.'},{n:'Mustard',l:'Brassica spp.',p:8,f:'Cover crop between the grove rows.'}],
+ queen:{name:'Pepita',breed:'Carniolan',year:2024,temp:'Calm',note:'Three seasons strong. Her colony is the one we split from every spring.'},
+ story:'The Mendez family rents hives to avocado growers for pollination, then sells the dark honey the bees make while they work.',
+ posts:[{d:'2026-11-01',t:'Holiday gift boxes',b:'Pairing our avocado honey with the grove\'s olive oil. 50 boxes this year.'}],
+ batch:'CGA-26-05',buy:['Carpinteria farmers market (Thu)','Grove stand, weekends']}
+];
+const usRegions=[
+ {n:'Santa Barbara, CA',lat:34.42,lon:-119.7,live:true},
+ {n:'Sonoma County, CA',lat:38.44,lon:-122.71,w:5,h:'Star thistle'},
+ {n:'Willamette Valley, OR',lat:44.94,lon:-123.03,w:4,h:'Blackberry'},
+ {n:'Texas Hill Country',lat:30.27,lon:-98.87,w:3,h:'Huajillo'},
+ {n:'Apalachicola, FL',lat:29.73,lon:-84.98,w:6,h:'Tupelo'},
+ {n:'Hudson Valley, NY',lat:41.7,lon:-73.92,w:4,h:'Basswood'},
+ {n:'Blue Ridge, NC',lat:35.6,lon:-82.55,w:5,h:'Sourwood'},
+ {n:'Upper Peninsula, MI',lat:46.5,lon:-87.4,w:2,h:'Fireweed'}
+];
+
+/* ---------------- helpers ---------------- */
+const $=s=>document.querySelector(s);
+const el=(t,a={},h='')=>{const e=document.createElement(t);Object.assign(e,a);if(h)e.innerHTML=h;return e};
+const pfundClass=p=>p<9?'Water white':p<18?'Extra white':p<35?'White':p<51?'Extra light amber':p<86?'Light amber':p<115?'Amber':'Dark amber';
+const fmtCoord=(lat,lon)=>`${lat.toFixed(4)}° N, ${Math.abs(lon).toFixed(4)}° W`;
+const fmtDate=d=>new Date(d+'T12:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+const initials=s=>s.split(/\s+/).filter(w=>/^[A-Z]/.test(w)).slice(0,2).map(w=>w[0]).join('');
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._);t._=setTimeout(()=>t.classList.remove('on'),1800)}
+function hexPath(cx,cy,r){let p='';for(let i=0;i<6;i++){const a=Math.PI/3*i-Math.PI/2;p+=(i?'L':'M')+(cx+r*Math.cos(a)).toFixed(1)+','+(cy+r*Math.sin(a)).toFixed(1)}return p+'Z'}
+function jar(h,size=120){
+  const id='g'+Math.random().toString(36).slice(2,7);
+  return `<svg width="${size}" height="${size*1.15}" viewBox="0 0 100 115">
+  <defs><linearGradient id="${id}" x1="0" x2="1"><stop offset="0" stop-color="${h.hex}" stop-opacity=".85"/><stop offset=".35" stop-color="${h.hex}"/><stop offset="1" stop-color="${h.hex}" stop-opacity=".7"/></linearGradient></defs>
+  <rect x="26" y="6" width="48" height="14" rx="3" fill="#2A1E12"/><rect x="26" y="9" width="48" height="2" fill="#4a3826"/>
+  <path d="M22 22h56c4 0 6 3 6 7v72c0 6-4 10-10 10H26c-6 0-10-4-10-10V29c0-4 2-7 6-7z" fill="url(#${id})" stroke="#fff8" stroke-width="1.5"/>
+  <path d="M24 30v66" stroke="#fff" stroke-opacity=".45" stroke-width="4" stroke-linecap="round"/>
+  <rect x="24" y="46" width="52" height="38" rx="4" fill="#FFFDF8"/>
+  <path d="${hexPath(50,58,7)}" fill="${h.hex}" stroke="#2A1E12" stroke-width="1"/>
+  <text x="50" y="76" text-anchor="middle" font-family="Fraunces,serif" font-weight="700" font-size="8" fill="#2A1E12">${initials(h.producer)}</text>
+  <text x="50" y="82" text-anchor="middle" font-family="DM Sans" font-size="3.6" fill="#6B5843" letter-spacing=".3">${h.batch}</text>
+  </svg>`;
+}
+
+/* ---------------- SB map ---------------- */
+const SB={lon0:-120.7,lat1:34.8,kx:800,ky:970,W:1000,H:485};
+const P=(lon,lat)=>[(lon-SB.lon0)*SB.kx,(SB.lat1-lat)*SB.ky];
+const coast=[[-120.64,34.80],[-120.62,34.68],[-120.65,34.58],[-120.60,34.53],[-120.47,34.45],[-120.35,34.465],[-120.23,34.47],[-120.07,34.46],[-120.00,34.455],[-119.88,34.41],[-119.84,34.405],[-119.78,34.41],[-119.69,34.40],[-119.63,34.415],[-119.60,34.42],[-119.52,34.39],[-119.45,34.36]];
+const towns=[['Santa Barbara',-119.70,34.42,1],['Goleta',-119.83,34.435],['Carpinteria',-119.52,34.40],['Solvang',-120.14,34.596],['Buellton',-120.19,34.613],['Los Olivos',-120.115,34.667],['Lompoc',-120.46,34.64],['Los Alamos',-120.28,34.744],['Montecito',-119.63,34.43]];
+let seasonFilter='All';
+function sbMap({focus=null,mini=false}={}){
+  const sea='M0,0 L'+coast.map(c=>P(...c).map(v=>v.toFixed(1)).join(',')).join(' L')+` L${SB.W},${SB.H} L0,${SB.H}Z`;
+  const ridge=[[-120.45,34.49],[-120.25,34.515],[-120.05,34.52],[-119.88,34.50],[-119.72,34.48],[-119.58,34.47],[-119.48,34.45]].map(c=>P(...c).join(',')).join(' L');
+  const ridge2=[[-120.55,34.78],[-120.35,34.70],[-120.25,34.69],[-120.05,34.72],[-119.85,34.70],[-119.6,34.66]].map(c=>P(...c).join(',')).join(' L');
+  const [lx,ly]=P(-119.98,34.583);
+  let s=`<svg class="map" viewBox="${focus?`${focus[0]-130} ${focus[1]-70} 260 140`:`0 0 ${SB.W} ${SB.H}`}" xmlns="http://www.w3.org/2000/svg">
+   <defs><pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(30)"><line x1="0" y1="0" x2="0" y2="8" stroke="#E2D3B4" stroke-width="2"/></pattern></defs>
+   <rect width="${SB.W}" height="${SB.H}" fill="var(--land)"/>
+   <path d="M${ridge}" fill="none" stroke="#D8C49C" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/>
+   <path d="M${ridge2}" fill="none" stroke="#D8C49C" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" opacity=".4"/>
+   <path d="M${ridge}" fill="none" stroke="#C4AC7E" stroke-width="1.2" stroke-dasharray="4 5"/>
+   <ellipse cx="${lx}" cy="${ly}" rx="34" ry="9" transform="rotate(-12 ${lx} ${ly})" fill="var(--sea2)"/>
+   <path d="${sea}" fill="var(--sea)"/>
+   <path d="${sea}" fill="none" stroke="var(--sea2)" stroke-width="6" opacity=".8"/>`;
+  if(!mini){
+   const [rx,ry]=P(-119.95,34.515);
+   s+=`<text x="${rx}" y="${ry-4}" font-size="11" fill="#A88F64" font-style="italic" font-family="Fraunces">Santa Ynez Mountains</text>
+   <text x="${lx+42}" y="${ly+4}" font-size="11" fill="#6E9592" font-style="italic" font-family="Fraunces">Lake Cachuma</text>
+   <text x="560" y="455" class="seaL" text-anchor="middle">SANTA BARBARA CHANNEL</text>
+   <text x="40" y="470" class="seaL" style="font-size:15px">Pacific</text>`;
+   towns.forEach(([n,lo,la,big])=>{const [x,y]=P(lo,la);const L=x>900;s+=`<circle class="townd" cx="${x}" cy="${y}" r="${big?4:2.5}"/><text class="town" x="${L?x-8:x+6}" y="${L?y+16:y+16}" ${L?'text-anchor="end"':''} ${big?'style="font-weight:700;fill:#6B5843"':''}>${n}</text>`});
+   s+=`<g transform="translate(940,40)"><circle r="18" fill="#FFFDF8" stroke="#E6D8BF"/><path d="M0,-12 L4,2 L0,0 L-4,2Z" fill="#2A1E12"/><text y="14" text-anchor="middle" font-size="8" font-weight="700" fill="#2A1E12">N</text></g>
+   <g transform="translate(830,470)"><line x1="0" x2="87" stroke="#6B5843" stroke-width="2"/><line x1="0" x2="0" y1="-4" y2="4" stroke="#6B5843" stroke-width="2"/><line x1="87" x2="87" y1="-4" y2="4" stroke="#6B5843" stroke-width="2"/><text x="44" y="-6" text-anchor="middle" font-size="11" fill="#6B5843">10 km</text></g>`;
+  }
+  if(mini){towns.forEach(([n,lo,la])=>{const [x,y]=P(lo,la);s+=`<circle class="townd" cx="${x}" cy="${y}" r="1.6"/><text x="${x+3}" y="${y+8}" font-size="7" fill="#8A7660" font-weight="600">${n}</text>`})}
+  if(focus){
+    s+=`<circle cx="${focus[0]}" cy="${focus[1]}" r="42" fill="${focus[2]}" fill-opacity=".18" stroke="${focus[2]}" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="${focus[0]}" y="${focus[1]-46}" text-anchor="middle" font-size="7.5" fill="#6B5843" font-weight="600">~3 mi forage radius</text>
+    <path d="${hexPath(focus[0],focus[1],8)}" fill="${focus[2]}" stroke="#fff" stroke-width="2"/>`;
+  } else {
+    honeys.forEach(h=>{
+      if(seasonFilter!=='All'&&h.season!==seasonFilter)return;
+      const [x,y]=P(h.lon,h.lat);
+      const w=h.producer.length*6.6+20;
+      s+=`<g class="pin" data-id="${h.id}" transform="translate(${x},${y})">
+        <path class="hex" d="${hexPath(0,0,13)}" fill="${h.hex}"/>
+        <g class="lbl"><rect x="${-w/2}" y="-46" width="${w}" height="26" rx="13" fill="#2A1E12"/><text y="-29" text-anchor="middle" fill="#FBF6EC" font-size="12" font-weight="600">${h.producer}</text></g></g>`;
+    });
+  }
+  return s+'</svg>';
+}
+
+/* ---------------- US map ---------------- */
+const usOutline=[[-124.7,48.4],[-122.8,49],[-95.2,49],[-94.8,49.4],[-89.6,48],[-84.5,46.5],[-82.5,45.3],[-82.4,43],[-79.2,43.4],[-76.5,44.2],[-75,45],[-71.5,45],[-70,47.4],[-67.8,47.1],[-67,44.8],[-70.2,43.6],[-70.6,42.6],[-70,41.7],[-71.9,41.3],[-74,40.6],[-74,39.3],[-75.5,38.5],[-75.9,37],[-75.5,35.2],[-77,34.6],[-79,33.5],[-81,32],[-81.4,30.5],[-80.5,28.5],[-80,26.7],[-80.4,25.2],[-81.2,25.2],[-81.8,26.5],[-82.7,28],[-82.8,29.2],[-84,30],[-85.4,29.7],[-86.5,30.4],[-88.5,30.4],[-89.6,30.2],[-89.4,29],[-90.5,29.1],[-92,29.6],[-94,29.6],[-95,29.2],[-97,27.8],[-97.4,26],[-99.2,26.6],[-100.4,28.3],[-101.4,29.8],[-102.5,29.8],[-103.2,29],[-104.5,29.6],[-106.5,31.8],[-108.2,31.8],[-108.2,31.3],[-111.1,31.3],[-114.8,32.5],[-117.1,32.5],[-117.3,33.2],[-118.4,34],[-119.6,34.4],[-120.6,34.6],[-121.9,36.5],[-122.5,37.5],[-123,38.2],[-123.8,39.5],[-124.2,40.4],[-124.1,42],[-124.5,43],[-124,46.2]];
+const UP=(lon,lat)=>[(lon+125)*0.79*16+20,(49.6-lat)*16+20];
+function usMap(){
+  let s=`<svg class="map" viewBox="0 0 780 450" style="background:var(--sea)"><path d="M${usOutline.map(c=>UP(...c).map(v=>v.toFixed(1)).join(',')).join(' L')}Z" fill="var(--land)" stroke="#D8C49C" stroke-width="2"/>`;
+  usRegions.forEach((r,i)=>{const [x,y]=UP(r.lon,r.lat);
+    if(r.live) s+=`<g class="pin" data-us="sb" transform="translate(${x},${y})"><circle r="22" fill="#D48A12" opacity=".2"><animate attributeName="r" values="14;26;14" dur="2.4s" repeatCount="indefinite"/></circle><path class="hex" d="${hexPath(0,0,13)}" fill="#D48A12"/><text y="4" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">8</text><g class="lbl" style="opacity:1"><rect x="10" y="-38" width="138" height="24" rx="12" fill="#2A1E12"/><text x="79" y="-22" text-anchor="middle" fill="#FBF6EC" font-size="11.5" font-weight="600">Santa Barbara · live</text></g></g>`;
+    else s+=`<g class="pin" data-us="${i}" transform="translate(${x},${y})"><path class="hex" d="${hexPath(0,0,9)}" fill="#FFFDF8" stroke-dasharray="3 2" style="stroke:#A88F64;stroke-width:2"/><g class="lbl"><rect x="-80" y="-42" width="160" height="28" rx="14" fill="#2A1E12"/><text y="-24" text-anchor="middle" fill="#FBF6EC" font-size="11.5" font-weight="600">${r.n} · ${r.h}</text></g></g>`;
+  });
+  return s+'</svg>';
+}
+
+let mapMode='sb';
+function renderMap(){
+  const host=$('#mapHost');
+  host.innerHTML=mapMode==='sb'?sbMap():usMap();
+  $('#legend').style.display=mapMode==='sb'?'':'none';
+  $('#seasonChips').style.display=mapMode==='sb'?'':'none';
+  const n=honeys.filter(h=>seasonFilter==='All'||h.season===seasonFilter).length;
+  $('#maphint').textContent=mapMode==='sb'?`${n} apiar${n===1?'y':'ies'} · hover a hive`:'1 live region · 7 on the waitlist';
+  host.querySelectorAll('.pin[data-id]').forEach(p=>{
+    p.onclick=()=>openHoney(p.dataset.id);
+    p.onmouseenter=()=>hl(p.dataset.id,true);p.onmouseleave=()=>hl(p.dataset.id,false);
+  });
+  host.querySelectorAll('.pin[data-us]').forEach(p=>p.onclick=()=>{
+    if(p.dataset.us==='sb'){setMode('sb')}else{const r=usRegions[+p.dataset.us];toast(`${r.n}: ${r.w} beekeepers on the waitlist — launching 2027`)}
+  });
+  renderSide();
+}
+function setMode(m){mapMode=m;document.querySelectorAll('#seg button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));renderMap()}
+document.querySelectorAll('#seg button').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+function hl(id,on){document.querySelectorAll(`[data-id="${id}"]`).forEach(e=>e.classList.toggle('hl',on));
+}
+function renderSide(){
+  const L=$('#sideList');L.innerHTML='';
+  honeys.filter(h=>seasonFilter==='All'||h.season===seasonFilter).sort((a,b)=>a.lon-b.lon).forEach(h=>{
+    const r=el('div',{className:'row'},`${jar(h,40)}<div><div class="t">${h.honey}</div><div class="m">${h.producer} · ${h.place}</div></div><div class="s">${h.season}</div>`);
+    r.dataset.id=h.id;r.onclick=()=>openHoney(h.id);r.onmouseenter=()=>hl(h.id,true);r.onmouseleave=()=>hl(h.id,false);L.append(r);
+  });
+}
+const SEASONS=['All','Spring','Summer','Fall','Winter'];
+function seasonChips(host,cb){host.innerHTML='';SEASONS.forEach(s=>{const c=el('button',{className:'chip'+(s===seasonFilter?' on':'')},s);c.onclick=()=>{seasonFilter=s;cb()};host.append(c)})}
+function refreshAll(){seasonChips($('#seasonChips'),refreshAll);seasonChips($('#dirChips'),refreshAll);renderMap();renderGrid()}
+
+/* ---------------- directory ---------------- */
+function renderGrid(){
+  const q=$('#q').value.trim().toLowerCase();const G=$('#grid');G.innerHTML='';
+  const list=honeys.filter(h=>(seasonFilter==='All'||h.season===seasonFilter)&&(!q||JSON.stringify([h.honey,h.producer,h.keeper,h.place,h.florals.map(f=>f.n)]).toLowerCase().includes(q)));
+  if(!list.length)G.innerHTML='<p style="color:var(--ink2)">No jars match that yet.</p>';
+  list.forEach(h=>{
+    const c=el('div',{className:'card hcard'},`<div class="top" style="background:linear-gradient(160deg,${h.hex}33,${h.hex}11)"><span class="chip season">${h.season} · ${h.harvest.split(' ')[0]}</span>${jar(h,110)}</div>
+    <div class="body"><div style="display:flex;justify-content:space-between;align-items:center"><h4>${h.honey}</h4><span class="vbadge">✓ Verified</span></div>
+    <div class="by">${h.producer} · ${h.place}</div>
+    <div class="fl">${h.florals.slice(0,3).map(f=>`<span class="tag">${f.n}</span>`).join('')}</div></div>`);
+    c.onclick=()=>openHoney(h.id);G.append(c);
+  });
+}
+$('#q').oninput=renderGrid;
+
+/* ---------------- drawer ---------------- */
+function openHoney(id){
+  const h=honeys.find(x=>x.id===id);if(!h)return;
+  const [x,y]=P(h.lon,h.lat);const yr=h.queen.year%10;
+  const D=$('#drawer');
+  D.innerHTML=`<div class="dhero" style="background:linear-gradient(170deg,${h.hex}55,${h.hex}10 80%)">
+    <button class="close" id="xclose" aria-label="Close">×</button>
+    <div class="hrow">${jar(h,96)}<div><span class="vbadge">✓ Verified by producer · Batch ${h.batch}</span><h2>${h.honey}</h2><div class="prod">${h.producer} · kept by ${h.keeper}</div></div></div>
+    <div class="stats">
+      <div class="stat"><div class="k">Harvest</div><div class="v">${h.harvest}</div></div>
+      <div class="stat"><div class="k">Color</div><div class="v">${pfundClass(h.pfund)}</div></div>
+      <div class="stat"><div class="k">Moisture</div><div class="v">${h.moisture}%</div></div>
+      <div class="stat"><div class="k">Hives</div><div class="v">${h.hives}</div></div>
+    </div></div>
+  <div class="sec"><h3>📍 Where it's from</h3>
+    <div class="minimap">${sbMap({focus:[x,y,h.hex],mini:true})}</div>
+    <div class="coords"><code>${fmtCoord(h.lat,h.lon)}</code><button id="cp">Copy</button><span style="color:var(--ink2)">${h.place}</span></div></div>
+  <div class="sec"><h3>🌼 What the bees visited</h3>
+    ${h.florals.map(f=>`<div class="floral"><div class="fh"><span>${f.n}<i>${f.l}</i></span><span>${f.p}%</span></div><div class="fbar"><span style="width:${f.p}%"></span></div><div class="fact">${f.f}</div></div>`).join('')}
+    <p style="font-size:12.5px;margin-top:4px">Floral shares as reported by the beekeeper. Foragers typically range about 3 miles from the hive.</p></div>
+  <div class="sec"><h3>👑 Meet the queen</h3>
+    <div class="queen"><div class="crown"><svg width="30" height="30" viewBox="0 0 24 24" fill="#D48A12"><path d="M3 18h18l-1.5-10-4.5 4-3-6-3 6-4.5-4z"/><rect x="3" y="19" width="18" height="2" rx="1"/></svg><span class="dot" style="background:${QCOLOR[yr]}"></span></div>
+    <div><h4>${h.queen.name}</h4><div class="qm">${h.queen.breed} · marked ${QCOLORNAME[yr]} (${h.queen.year}) · ${h.queen.temp}</div><p style="font-size:14.5px">"${h.queen.note}"</p>
+    <p style="font-size:13px;margin-top:8px"><b style="color:var(--ink)">About the line:</b> ${BREEDS[h.queen.breed]}</p>
+    <p style="font-size:13px;margin-top:6px"><b style="color:var(--ink)">Why ${QCOLORNAME[yr]}?</b> Beekeepers mark queens with a dot whose color encodes the year she was born, so they can tell her age at a glance.</p></div></div></div>
+  <div class="sec"><h3>🍯 Tasting</h3><div class="notes">${h.notes.map(n=>`<span class="chip">${n}</span>`).join('')}</div>
+    <p style="margin-top:10px;font-size:14px"><b style="color:var(--ink)">Crystallization:</b> ${h.crystal}. Crystallized honey isn't spoiled; warm the jar gently in water to bring it back.</p></div>
+  <div class="sec"><h3>🐝 From the beekeeper</h3><p>${h.story}</p><div style="margin-top:14px">
+    ${h.posts.map(p=>`<div class="fpost"><div class="d">${fmtDate(p.d)}</div><b>${p.t}</b><p>${p.b}</p></div>`).join('')}</div></div>
+  <div class="sec"><h3>📋 Honey card</h3><table class="spec">
+    <tr><td>Varietal</td><td>${h.honey}</td></tr><tr><td>Primary source</td><td>${h.florals[0].n} (${h.florals[0].p}%)</td></tr>
+    <tr><td>Apiary location</td><td>${fmtCoord(h.lat,h.lon)}</td></tr><tr><td>Season · harvest</td><td>${h.season} · ${h.harvest}</td></tr>
+    <tr><td>Color (Pfund)</td><td>${h.pfund} mm · ${pfundClass(h.pfund)}</td></tr><tr><td>Moisture</td><td>${h.moisture}%</td></tr>
+    <tr><td>Processing</td><td>Raw · strained, not filtered · unheated</td></tr><tr><td>Batch</td><td>${h.batch}</td></tr></table></div>
+  <div class="sec"><h3>🛒 Where to buy</h3><div class="chips">${h.buy.map(b=>`<span class="chip">${b}</span>`).join('')}</div>
+    <div style="display:flex;gap:10px;margin-top:16px"><button class="btn" id="follow">Follow ${h.producer.split(' ')[0]}</button><button class="btn alt" id="save">Save to my pantry</button></div></div>`;
+  D.classList.add('on');$('#scrim').classList.add('on');D.scrollTop=0;D.setAttribute('aria-hidden','false');
+  $('#xclose').onclick=closeD;
+  $('#cp').onclick=async()=>{try{await navigator.clipboard.writeText(`${h.lat}, ${h.lon}`);toast('Coordinates copied')}catch(e){toast(`${h.lat}, ${h.lon}`)}};
+  $('#follow').onclick=e=>{e.target.textContent='Following ✓';toast(`You'll see ${h.producer}'s posts in your Journal`)};
+  $('#save').onclick=e=>{e.target.textContent='Saved ✓'};
+}
+function closeD(){$('#drawer').classList.remove('on');$('#scrim').classList.remove('on');$('#drawer').setAttribute('aria-hidden','true')}
+$('#scrim').onclick=closeD;document.addEventListener('keydown',e=>{if(e.key==='Escape')closeD()});
+
+/* ---------------- scan ---------------- */
+const sj=$('#sampleJars');
+honeys.slice(0,6).forEach(h=>{const b=el('button',{},`${jar(h,56)}<div>${h.honey.split(' ')[0]}</div>`);b.onclick=()=>runScan(null,h);sj.append(b)});
+$('#file').onchange=e=>{const f=e.target.files[0];if(f)runScan(f)};
+const drop=$('#drop');
+['dragover','dragenter'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove('over')}));
+drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/'))runScan(f)});
+let scanTimer=[];
+function runScan(file,forced){
+  scanTimer.forEach(clearTimeout);scanTimer=[];
+  const st=$('#stage'),log=$('#log'),M=$('#match');
+  st.querySelectorAll('img,.sample').forEach(n=>n.remove());$('#stagePh').style.display='none';M.classList.remove('on');
+  let h=forced;
+  if(file){const img=el('img');img.src=URL.createObjectURL(file);st.prepend(img);h=honeys[(file.size+file.name.length)%honeys.length]}
+  else{const d=el('div',{className:'sample'},jar(h,240));d.style.cssText=`display:grid;place-items:center;width:100%;height:100%;background:radial-gradient(circle at 50% 60%,${h.hex}55,#1d150c 70%)`;st.prepend(d)}
+  st.className='stage scanning';log.innerHTML='';
+  const lines=[['Detecting jar & label…',''],[`Label text → "${h.producer}"`,'ok'],[`Batch code → ${h.batch}`,'ok'],['Searching producer registry…',''],[`Match: ${h.honey} · ${h.place}`,'ok']];
+  lines.forEach(([t,c],i)=>scanTimer.push(setTimeout(()=>{log.innerHTML+=`<div class="${c}">${c?'✓ ':'› '}${t}</div>`},350+i*520)));
+  scanTimer.push(setTimeout(()=>{
+    st.className='stage done';
+    M.innerHTML=`${jar(h,62)}<div style="flex:1"><div class="conf">${file?'94':'98'}% match · verified record</div><div style="font-family:Fraunces;font-weight:700;font-size:21px">${h.honey}</div><div style="color:var(--ink2);font-size:14px">${h.producer} · ${h.harvest}</div></div><button class="btn" id="openM">See the full story →</button>`;
+    M.classList.add('on');$('#openM').onclick=()=>openHoney(h.id);
+  },350+lines.length*520+300));
+}
+
+/* ---------------- journal ---------------- */
+function renderFeed(){
+  const F=$('#feed');F.innerHTML='';
+  honeys.flatMap(h=>h.posts.map(p=>({...p,h}))).sort((a,b)=>b.d.localeCompare(a.d)).forEach(p=>{
+    const c=el('div',{className:'card post'},`<div class="ph"><div class="avatar" style="background:${p.h.hex}">${initials(p.h.producer)}</div><div><b>${p.h.producer}</b><div class="meta">${p.h.place} · ${fmtDate(p.d)}</div></div></div><h3>${p.t}</h3><p>${p.b}</p>
+      <div style="margin-top:12px"><span class="tag" style="cursor:pointer">🍯 ${p.h.honey} →</span></div>`);
+    c.querySelector('.ph').onclick=c.querySelector('.tag').onclick=()=>openHoney(p.h.id);F.append(c);
+  });
+}
+$('#sub').onsubmit=e=>{e.preventDefault();e.target.style.display='none';$('#subok').style.display='block'};
+
+/* ---------------- routing ---------------- */
+function route(){
+  const v=(location.hash||'#map').slice(1);const name=['map','scan','directory','journal'].includes(v)?v:'map';
+  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+name));
+  document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',a.dataset.v===name));
+  closeD();window.scrollTo(0,0);
+}
+window.addEventListener('hashchange',route);
+refreshAll();renderFeed();route();
+</script>
+</body>
+</html>
